@@ -2,7 +2,7 @@
 {
     public class payments
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string? merchantAccount { get; set; }
         public int amount { get; set; }
         public string? channel { get; set; }

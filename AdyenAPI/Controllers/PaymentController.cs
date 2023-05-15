@@ -2,7 +2,10 @@
 using AdyenAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 using System.Threading.Channels;
+using System.Net.Http;
+using Newtonsoft.Json;
 
 namespace AdyenAPI.Controllers
 {
@@ -10,21 +13,15 @@ namespace AdyenAPI.Controllers
     [Route("api/[controller]")]
     public class PaymentController : Controller
     {
-        private readonly AdyenAPIContext dbContext;
+        private readonly AdyenAPIContext  dbContext;
         public PaymentController(AdyenAPIContext dbContext)
         {
             this.dbContext = dbContext;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllPayments()
-        {
-           return Ok(await dbContext.Payment.ToListAsync());
-        }
-
-        [HttpGet]
         [Route("{id:guid}")]
-        public async Task<IActionResult> AddPayment([FromRoute] Guid id)
+        public async Task<IActionResult> AddPayment([FromRoute] int id)
         {
             var payments = await dbContext.Payment.FindAsync(id);
             if (payments == null)
@@ -33,58 +30,26 @@ namespace AdyenAPI.Controllers
             }
             return Ok(payments);
         }
-
         [HttpPost]
-        public async Task<IActionResult> Addpayments(AddPayments addPayments)
+        public IActionResult Index()
         {
-            var payments = new payments()
+            //Setting TLS 1.2 protocol
+            ServicePointManager.Expect100Continue = true;
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+            //Fetch the JSON string from URL.
+            List<payments> customers = new List<payments>();
+            string apiUrl = "https://checkout-test.adyen.com/v69/paymentMethods";
+
+            HttpClient client = new HttpClient();
+            HttpResponseMessage response = client.GetAsync(apiUrl).Result;
+            if (response.IsSuccessStatusCode)
             {
-                Id = Guid.NewGuid(),
-                merchantAccount = addPayments.merchantAccount,
-                amount = addPayments.amount,
-                channel = addPayments.channel,
-                countryCode = addPayments.countryCode,
-                shopperLocale = addPayments.shopperLocale
-            };
-            await dbContext.Payment.AddAsync(payments);
-            await dbContext.SaveChangesAsync();
-
-            return Ok(payments);
-        }
-
-        [HttpPut]
-        [Route("{id:guid}")]
-        public async Task<IActionResult> UpdatePayments([FromRoute] Guid id, UpdatePayments updatePayments)
-        {
-            var payments = await dbContext.Payment.FindAsync(id);
-
-            if(payments != null)
-            {
-                payments.merchantAccount = updatePayments.merchantAccount;
-                payments.amount = updatePayments.amount;
-                payments.channel = updatePayments.channel;
-                payments.countryCode = updatePayments.countryCode;
-                payments.shopperLocale = updatePayments.shopperLocale;
-
-                await dbContext.SaveChangesAsync();
-                return Ok(payments);
+                customers = JsonConvert.DeserializeObject<List<payments>>(response.Content.ReadAsStringAsync().Result);
             }
-            return NotFound();
-        }
 
-        [HttpDelete]
-        [Route("{id:guid}")]
-        public async Task<IActionResult> DeletePayments([FromRoute] Guid id)
-        {
-            var payments = await dbContext.Payment.FindAsync(id);
-
-            if (payments != null)
-            {
-                dbContext.Remove(payments);
-                await dbContext.SaveChangesAsync();
-                return Ok(payments);
-            }
-            return NotFound();
+            //Return the Deserialized JSON object.
+            return Json(customers);
         }
     }
 }
