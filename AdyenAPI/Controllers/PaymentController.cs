@@ -13,7 +13,7 @@ namespace AdyenAPI.Controllers
     [Route("api/[controller]")]
     public class PaymentController : Controller
     {
-        private readonly AdyenAPIContext  dbContext;
+        private readonly AdyenAPIContext  dbContext ;
         public PaymentController(AdyenAPIContext dbContext)
         {
             this.dbContext = dbContext;
